@@ -2,6 +2,11 @@
 
 Production-ready single-vendor e-commerce app for Tunisia using Next.js App Router + Prisma + NextAuth.
 
+## Why Vercel NOT_FOUND happened
+If this project is deployed with the **repository root** set incorrectly (for example, before this fix when app files were nested in a subfolder), Vercel can build/deploy without finding the expected Next.js routes and return `NOT_FOUND`.
+
+This repository now keeps the Next.js app at the root so Vercel auto-detects it correctly.
+
 ## Features
 - FR/EN UX foundation and TND-only pricing
 - Storefront: homepage sections, categories, search, product page, cart, checkout
@@ -42,9 +47,10 @@ Production-ready single-vendor e-commerce app for Tunisia using Next.js App Rout
 ## Vercel deploy
 1. Push repository to GitHub.
 2. Import on Vercel.
-3. Add all env vars from `.env.example`.
-4. Provision PostgreSQL (Neon/Supabase/RDS) and set `DATABASE_URL`.
-5. Run Prisma migration on deployment (`npx prisma migrate deploy`).
+3. Framework preset should auto-detect as **Next.js**.
+4. Add all env vars from `.env.example`.
+5. Provision PostgreSQL (Neon/Supabase/RDS) and set `DATABASE_URL`.
+6. Run Prisma migration on deployment (`npx prisma migrate deploy`).
 
 ## Notes on Tunisian card gateways
 - `lib/payments/providers.ts` includes clean adapter stubs for e-Dinar + Monétique.
