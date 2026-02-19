@@ -1,0 +1,246 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  addresses     Address[]
+  cart          Cart?
+  orders        Order[]
+}
+
+model Address {
+  id          String   @id @default(cuid())
+  userId      String
+  fullName    String
+  phone       String
+  line1       String
+  line2       String?
+  governorate String
+  city        String
+  postalCode  String
+  isDefault   Boolean  @default(false)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders      Order[]
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  nameEn      String
+  nameFr      String
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  products    Product[]
+}
+
+model Product {
+  id          String         @id @default(cuid())
+  nameEn      String
+  nameFr      String
+  slug        String         @unique
+  descriptionEn String
+  descriptionFr String
+  price       Decimal        @db.Decimal(10, 3)
+  categoryId  String
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  category    Category       @relation(fields: [categoryId], references: [id])
+  images      ProductImage[]
+  variants    Variant[]
+  orderItems  OrderItem[]
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  alt       String
+  sortOrder Int      @default(0)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Variant {
+  id        String    @id @default(cuid())
+  productId String
+  sku       String    @unique
+  labelEn   String
+  labelFr   String
+  price     Decimal?  @db.Decimal(10, 3)
+  inventory Inventory?
+  cartItems CartItem[]
+  orderItems OrderItem[]
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Inventory {
+  id          String  @id @default(cuid())
+  variantId   String  @unique
+  quantity    Int
+  lowStockAt  Int     @default(5)
+  variant     Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  variantId String
+  quantity  Int
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant   Variant  @relation(fields: [variantId], references: [id])
+  @@unique([cartId, variantId])
+}
+
+model Order {
+  id              String       @id @default(cuid())
+  userId          String
+  addressId       String
+  status          OrderStatus  @default(PENDING)
+  paymentMethod   PaymentMethod
+  paymentStatus   PaymentStatus @default(PENDING)
+  subtotal        Decimal      @db.Decimal(10, 3)
+  deliveryFee     Decimal      @db.Decimal(10, 3)
+  discount        Decimal      @default(0) @db.Decimal(10, 3)
+  total           Decimal      @db.Decimal(10, 3)
+  promoCodeId     String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  user            User         @relation(fields: [userId], references: [id])
+  address         Address      @relation(fields: [addressId], references: [id])
+  items           OrderItem[]
+  promoCode       PromoCode?   @relation(fields: [promoCodeId], references: [id])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId      String
+  productId    String
+  variantId    String
+  productName  String
+  variantLabel String
+  unitPrice    Decimal @db.Decimal(10, 3)
+  quantity     Int
+  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product @relation(fields: [productId], references: [id])
+  variant      Variant @relation(fields: [variantId], references: [id])
+}
+
+model PromoCode {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  type         DiscountType
+  value        Decimal  @db.Decimal(10, 3)
+  minOrder     Decimal? @db.Decimal(10, 3)
+  startsAt     DateTime
+  endsAt       DateTime
+  active       Boolean  @default(true)
+  usageLimit   Int?
+  usedCount    Int      @default(0)
+  orders       Order[]
+}
+
+model FeaturedSection {
+  id      String   @id @default(cuid())
+  kind    FeaturedKind
+  itemId  String
+  rank    Int      @default(0)
+}
+
+model DeliveryFee {
+  id          String  @id @default(cuid())
+  governorate String?
+  city        String?
+  amount      Decimal @db.Decimal(10, 3)
+  isDefault   Boolean @default(false)
+
+  @@unique([governorate, city])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  COD
+  EDINAR
+  MONETIQUE
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+enum FeaturedKind {
+  FEATURED_CATEGORY
+  BEST_SELLER
+  NEW_ARRIVAL
+}
